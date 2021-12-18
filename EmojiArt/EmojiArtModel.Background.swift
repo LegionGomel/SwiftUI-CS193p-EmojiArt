@@ -10,7 +10,7 @@ import Foundation
 extension EmojiArtModel {
     
     // Enum with associated data
-    enum Background {
+    enum Background: Equatable {
         case blank
         case url(URL)
         case imageData(Data)
@@ -27,7 +27,7 @@ extension EmojiArtModel {
         var imageData: Data? {
             switch self {
             case .imageData(let data): return data
-            default: return nil 
+            default: return nil
             }
         }
     }

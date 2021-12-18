@@ -11,7 +11,15 @@ class EmojiArtDocument: ObservableObject
 {
     // Private(set) to access emojiArt but not to change it fom here.
     // Only through a special methods that provided.
-    @Published private(set) var emojiArt: EmojiArtModel
+    // To know when background image is changes, we use
+    // property observers
+    @Published private(set) var emojiArt: EmojiArtModel {
+        didSet {
+            if emojiArt.background != oldValue.background {
+                fetchBackgroundImageDataIfNecessary()
+            }
+        }
+    }
     
     init() {
         emojiArt = EmojiArtModel()
@@ -22,6 +30,43 @@ class EmojiArtDocument: ObservableObject
     // This is made only for cleaner look when accessing emojis via computed property
     var emojis: [EmojiArtModel.Emoji] { emojiArt.emojis }
     var background: EmojiArtModel.Background { emojiArt.background }
+    
+    
+    @Published var backgroundImage: UIImage?
+    @Published var backgroundImageFetchStatus = BackgroundImageFetchStatus.idle
+    
+    enum BackgroundImageFetchStatus {
+        case idle
+        case fetching
+    }
+    
+    // This function is happen always when something is changes our background
+    private func fetchBackgroundImageDataIfNecessary() {
+        backgroundImage =  nil
+        switch emojiArt.background {
+        case .url(let url):
+            // fetch the url
+            backgroundImageFetchStatus = .fetching
+            DispatchQueue.global(qos: .userInitiated).async {
+                let imageData = try? Data(contentsOf: url)
+                // Weak self - redefine self in closure as weak (not to force self to do
+                // function, and turning self to optional
+                DispatchQueue.main.async { [weak self] in
+                    // If URL is current one  that we look for, then to a thing
+                    if self?.emojiArt.background == EmojiArtModel.Background.url(url) {
+                        self?.backgroundImageFetchStatus = .idle
+                        if imageData != nil {
+                            self?.backgroundImage = UIImage(data: imageData!)
+                        }
+                    }
+                }
+            }
+        case .imageData(let data):
+            backgroundImage = UIImage(data: data)
+        case .blank:
+            break
+        }
+    }
     
     // MARK: - Intent(s)
     
