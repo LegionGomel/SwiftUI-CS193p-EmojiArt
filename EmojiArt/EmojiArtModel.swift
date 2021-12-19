@@ -7,12 +7,12 @@
 
 import Foundation
 
-struct EmojiArtModel {
+struct EmojiArtModel: Codable {
     var background = Background.blank
     var emojis = [Emoji]()
     
     // Hashable need if we want to use it in a set
-    struct Emoji: Identifiable, Hashable {
+    struct Emoji: Identifiable, Hashable, Codable {
         let text: String
         var x: Int // Offset from the center
         var y: Int // Offset from the center
@@ -28,6 +28,21 @@ struct EmojiArtModel {
             self.size = size
             self.id = id
         }
+    }
+    
+    func json() throws -> Data {
+        return try JSONEncoder().encode(self)
+    }
+    
+    init(json: Data) throws {
+        self = try JSONDecoder().decode(EmojiArtModel.self, from: json)
+    }
+    
+    // We can do it in our main thread only if it something local (as for now it is
+    // a file URL). Otherwise it is more complicated and async
+    init(url: URL) throws {
+        let data = try Data(contentsOf: url)
+        self = try EmojiArtModel(json: data)
     }
     
     init() { }
