@@ -78,7 +78,7 @@ extension Set where Element: Identifiable {
 // (thus withNoRepeatedCharacters below)
 
 extension String {
-    var withNoRepeatedCharacters: String {
+    var removingDuplicateCharacters: String {
         var uniqued = ""
         for ch in self {
             if !uniqued.contains(ch) {
