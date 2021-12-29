@@ -9,7 +9,11 @@ import SwiftUI
 
 struct EmojiArtDocumentView: View {
     @ObservedObject var document: EmojiArtDocument
-    let defaultEmojiFontSIze: CGFloat = 40
+    
+    @Environment(\.undoManager) var undoManager
+    
+    // This @ScaledMetric used for emoji size scaling with general ios settings
+    @ScaledMetric var defaultEmojiFontSIze: CGFloat = 40
     
     var body: some View {
         VStack(spacing: 0) { 
@@ -58,10 +62,20 @@ struct EmojiArtDocumentView: View {
                 }
             }
             .onReceive(document.$backgroundImage) { image in
-                zoomToFit(image, in: geometry.size)
+                if autozoom {
+                    zoomToFit(image, in: geometry.size)
+                }
+            }
+            .toolbar {
+                UndoButton(
+                    undo: undoManager?.optionalUndoMenuItemTitle,
+                    redo: undoManager?.optionalRedoMenuItemTitle
+                )
             }
         }
     }
+    
+    @State private var autozoom = false
     
     @State private var alertToShow: IdentifiableAlert?
     
@@ -77,12 +91,14 @@ struct EmojiArtDocumentView: View {
     
     private func drop(providers: [NSItemProvider], at location: CGPoint, in geometry: GeometryProxy) -> Bool {
         var found = providers.loadObjects(ofType: URL.self) { url in
-            document.setBackground(EmojiArtModel.Background.url(url.imageURL))
+            autozoom = true
+            document.setBackground(EmojiArtModel.Background.url(url.imageURL), undoManager: undoManager)
         }
         if !found {
             found = providers.loadObjects(ofType: UIImage.self) { image in
                 if let data = image.jpegData(compressionQuality: 1.0) {
-                    document.setBackground(.imageData(data))
+                    autozoom = true
+                    document.setBackground(.imageData(data), undoManager: undoManager)
                 }
             }
         }
@@ -92,7 +108,8 @@ struct EmojiArtDocumentView: View {
                     document.addEmoji(
                         String(emoji),
                         at: convertToEmojiCoordinates(location, in: geometry),
-                        size: defaultEmojiFontSIze / zoomScale
+                        size: defaultEmojiFontSIze / zoomScale,
+                        undoManager: undoManager
                     )
                 }
             }
@@ -104,7 +121,10 @@ struct EmojiArtDocumentView: View {
         CGFloat(emoji.size)
     }
     
-    @State private var steadyStatePanOffset: CGSize = CGSize.zero
+    // MARK: - Panning
+    
+    @SceneStorage("EmojiArtDocumentView.steadyStatePanOffset")
+    private var steadyStatePanOffset: CGSize = CGSize.zero
     @GestureState private var gesturePanOffset: CGSize = CGSize.zero
     
     private var panOffset: CGSize {
@@ -121,7 +141,10 @@ struct EmojiArtDocumentView: View {
             }
     }
     
-    @State private var steadyStateZoomScale: CGFloat = 1
+    // MARK: - Zooming
+    
+    @SceneStorage("EmojiArtDocumentView.steadyStateZoomScale")
+    private var steadyStateZoomScale: CGFloat = 1
     @GestureState private var gestureZoomScale: CGFloat = 1
     
     private var zoomScale: CGFloat  {

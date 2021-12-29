@@ -13,7 +13,9 @@ struct PaletteChooser: View {
     
     @EnvironmentObject var store: PaletteStore
     
-    @State private var choosenPaletteIndex = 0
+    // Permanent storage for each scene @SceneStorage
+    @SceneStorage("PaletteChooser.chosenPaletteIndex")
+    private var choosenPaletteIndex = 0
     
     var body: some View {
         HStack{
